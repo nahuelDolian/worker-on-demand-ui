@@ -1,13 +1,11 @@
-worker-on-demand-ui — frontend (React Native)
+# worker-on-demand-ui (frontend)
 
-This repository contains the mobile frontend (React Native / Expo + NativeWind).
-It communicates with the backend at: https://github.com/nahuelDolian/worker-on-demand
+Mobile app (React Native / Expo). Contiene la app que antes estaba en la carpeta `mobile` del repo original.
 
-Quick start:
-  - Clone: git clone https://github.com/nahuelDolian/worker-on-demand-ui.git
-  - Install: npm install
-  - Run (Expo): npx expo start
-  - Android: npx react-native run-android
-  - iOS: npx react-native run-ios
+Quick start
+- Node 18+ y npm
+- npm install
+- npm start    # o `expo start` según scripts
+- Ver scripts en package.json para iOS/Android
 
-Create a .env file with API_BASE_URL pointing to your backend (e.g. http://localhost:8080).
+Branching: main es la rama de release.
