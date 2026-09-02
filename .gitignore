@@ -1,6 +1,25 @@
+# Node
 node_modules/
+package-lock.json
+yarn.lock
+
+# Expo / React Native
 .expo/
-dist/
-web-build/
-*.log
+.expo-shared/
+
+android/.gradle/
+android/build/
+
+ios/Pods/
+ios/build/
+
+# Local env
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
 .DS_Store
+npm-debug.log
+yarn-error.log
