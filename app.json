@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Worker On Demand",
+    "slug": "worker-on-demand",
+    "scheme": "workerondemand",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.workerondemand.app"
+    },
+    "android": {
+      "package": "com.workerondemand.app",
+      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permitinos acceder a tus fotos para subir tu DNI.",
+          "cameraPermission": "Permitinos usar la cámara para verificar tu identidad."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permitinos usar la cámara para escanear el código QR del local."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Permitinos acceder a tu ubicación para validar tu presencia en el local."
+        }
+      ]
+    ]
+  }
+}

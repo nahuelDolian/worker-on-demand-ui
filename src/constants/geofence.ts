@@ -1,0 +1,1 @@
+export const MAX_CHECK_IN_DISTANCE_METERS = 200;
