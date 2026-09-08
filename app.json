@@ -6,14 +6,20 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.workerondemand.app"
     },
     "android": {
       "package": "com.workerondemand.app",
-      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "plugins": [
       [
@@ -34,7 +40,9 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Permitinos acceder a tu ubicación para validar tu presencia en el local."
         }
-      ]
+      ],
+      "expo-router",
+      "expo-secure-store"
     ]
   }
 }

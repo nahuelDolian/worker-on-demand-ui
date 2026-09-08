@@ -5,16 +5,25 @@ import * as Linking from 'expo-linking';
 import { PrimaryButton } from '../../../components/ui/PrimaryButton';
 import { getMercadoPagoAuthorizeUrl, MERCADOPAGO_MOBILE_REDIRECT_PATH } from '../../../api/workerOnboardingApi';
 import { useOnboardingStore } from '../../../store/useOnboardingStore';
+import { useSessionStore } from '../../../store/useSessionStore';
 
+/**
+ * Vínculo OAuth con Mercado Pago — reutilizado tal cual para WORKER y RESTAURANT (SPEC.md
+ * Domain 1: "mandatory linking" para ambos roles, mismo flujo genérico del lado backend,
+ * `MercadoPagoOAuthController`/`Service` no distinguen rol). Solo cambia el copy según para qué
+ * usa cada rol el vínculo: el worker cobra (90% split), el restaurante autoriza los holds.
+ */
 export function MercadoPagoLinkStep() {
-  const workerId = useOnboardingStore((state) => state.workerId);
+  // Corre autenticado (después del login) — el userId sale de la sesión.
+  const userId = useSessionStore((state) => state.user?.id ?? null);
+  const role = useSessionStore((state) => state.user?.role);
   const mercadoPagoLinked = useOnboardingStore((state) => state.mercadoPagoLinked);
   const setMercadoPagoLinked = useOnboardingStore((state) => state.setMercadoPagoLinked);
   const [error, setError] = useState<string | null>(null);
   const [isLinking, setIsLinking] = useState(false);
 
   const handleLinkPress = useCallback(async () => {
-    if (!workerId) {
+    if (!userId) {
       setError('Falta completar los pasos anteriores.');
       return;
     }
@@ -24,7 +33,7 @@ export function MercadoPagoLinkStep() {
 
     try {
       const redirectUri = Linking.createURL(MERCADOPAGO_MOBILE_REDIRECT_PATH);
-      const result = await WebBrowser.openAuthSessionAsync(getMercadoPagoAuthorizeUrl(workerId), redirectUri);
+      const result = await WebBrowser.openAuthSessionAsync(getMercadoPagoAuthorizeUrl(userId), redirectUri);
 
       if (result.type === 'success') {
         const { queryParams } = Linking.parse(result.url);
@@ -39,14 +48,17 @@ export function MercadoPagoLinkStep() {
     } finally {
       setIsLinking(false);
     }
-  }, [workerId, setMercadoPagoLinked]);
+  }, [userId, setMercadoPagoLinked]);
+
+  const subtitle =
+    role === 'RESTAURANT'
+      ? 'Lo necesitamos para autorizar el hold de cada turno que publiques y liberar el pago al trabajador cuando termine.'
+      : 'Vas a cobrar tus turnos directamente en tu cuenta de Mercado Pago apenas se liquide el pago.';
 
   return (
     <View className="flex-1 px-5">
       <Text className="mb-1 text-2xl font-bold text-neutral-900">Vinculá tu cuenta de Mercado Pago</Text>
-      <Text className="mb-6 text-base text-neutral-500">
-        Vas a cobrar tus turnos directamente en tu cuenta de Mercado Pago apenas se liquide el pago.
-      </Text>
+      <Text className="mb-6 text-base text-neutral-500">{subtitle}</Text>
 
       {mercadoPagoLinked ? (
         <View accessibilityRole="alert" className="mb-6 rounded-xl bg-emerald-50 p-4">

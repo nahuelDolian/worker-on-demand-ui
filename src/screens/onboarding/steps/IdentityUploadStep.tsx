@@ -7,6 +7,7 @@ import { useMutation } from '@tanstack/react-query';
 import { PrimaryButton } from '../../../components/ui/PrimaryButton';
 import { uploadIdentityDocuments } from '../../../api/workerOnboardingApi';
 import { useOnboardingStore } from '../../../store/useOnboardingStore';
+import { useSessionStore } from '../../../store/useSessionStore';
 import { IdentityUploadValues, identityUploadSchema } from '../schema';
 
 const PHOTO_SLOTS: { field: keyof IdentityUploadValues; title: string; useCameraOnly?: boolean }[] = [
@@ -15,8 +16,15 @@ const PHOTO_SLOTS: { field: keyof IdentityUploadValues; title: string; useCamera
   { field: 'selfieUri', title: 'Selfie', useCameraOnly: true },
 ];
 
-export function IdentityUploadStep() {
-  const workerId = useOnboardingStore((state) => state.workerId);
+interface IdentityUploadStepProps {
+  /** Se llama después de un upload exitoso — la pantalla que monta este step decide a dónde ir. */
+  onDone?: () => void;
+}
+
+export function IdentityUploadStep({ onDone }: IdentityUploadStepProps) {
+  // Corre autenticado (después del login) — el workerId sale de la sesión, nunca del body
+  // (el backend rechaza con 403 si no coincide con el token, spec 01).
+  const workerId = useSessionStore((state) => state.user?.id ?? null);
   const setIdentityUpload = useOnboardingStore((state) => state.setIdentityUpload);
 
   const { control, handleSubmit, setValue } = useForm<IdentityUploadValues>({
@@ -53,6 +61,7 @@ export function IdentityUploadStep() {
   const onSubmit = handleSubmit(async (values) => {
     await uploadMutation.mutateAsync(values);
     setIdentityUpload(values);
+    onDone?.();
   });
 
   return (

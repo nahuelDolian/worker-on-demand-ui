@@ -3,6 +3,8 @@
 > **Qué es este documento:** el mismo tipo de relevamiento que se hizo para el backend (`worker-on-demand/DOCS/ROADMAP.md`), pero para este repo: la app mobile (React Native / Expo). Generado leyendo el código real, no solo el README. Complementa a `DOCS/SPEC.md` y `DOCS/CLAUDE.md` del repo backend (que siguen siendo la fuente de verdad de negocio para todo el sistema) con la foto de qué existe hoy del lado cliente, qué está a medias, y qué falta.
 >
 > **Generado:** 2026-09-04, sobre la rama `main` (única rama con contenido; 4 commits: import inicial + 3 actualizaciones de README).
+>
+> **Actualización 2026-09-07:** desde este relevamiento se cerraron tres specs (`esenciales/02-navegacion-y-enrutamiento.md`, `seguridad/01-almacenamiento-seguro-sesion.md` y `esenciales/03-autenticacion-cliente.md`) — hoy **sí** existe navegación (Expo Router, con tabs), storage seguro de sesión (`expo-secure-store`, nativo — no en web, ver la spec) y el flujo completo de registro con password → verificación de email → login → área autenticada. El resto de este documento se dejó tal cual quedó el 09-04 como registro histórico del relevamiento original; las secciones 5.2, 5.3, 6 y 8 tienen notas puntuales marcando qué cambió.
 
 ---
 
@@ -89,20 +91,20 @@ Leyenda: ✅ completo y alcanzable | ⚠️ construido pero con gaps | ❌ no ex
 | Escaneo de QR (`CheckInScreen`) | ✅ construido | Usa `expo-camera`, valida el formato del dato escaneado (`parseShiftIdFromQrData`, acepta UUID crudo o URL con `?shiftId=`). |
 | Validación de geofence client-side | ✅ construido | Pide ubicación, calcula distancia Haversine contra `GET /api/shifts/{id}/location`, y si está a más de 200m no deja continuar — coherente con que el backend **también** re-valida server-side (defensa en profundidad correcta). |
 | Estados de la UI (`CheckStatusPanel`) | ✅ construido | Maneja bien los 6 estados posibles (`scanning`, `validating`, `submitting`, `out-of-range`, `success`, `error`) con mensajes claros. |
-| **Alcanzable desde la app** | ❌ | `App.tsx` no lo monta ni existe navegación para llegar acá. Es, en la práctica, código muerto hasta que se resuelva la navegación. |
+| **Alcanzable desde la app** | ✅ (09-07) | Vive en `app/(app)/(tabs)/checkin.tsx`, tab "Check-in" del área autenticada, con un toggle para elegir check-in/check-out. |
 
 ### 5.3 Todo lo demás (no existe ningún archivo)
 | Feature | Estado |
 |---|---|
-| Login / pantalla de autenticación | ❌ (depende de que el backend tenga auth — hoy no la tiene, ver `worker-on-demand/DOCS/specs/esenciales/01-autenticacion-autorizacion.md`) |
+| Login / pantalla de autenticación | ✅ (09-07) — `esenciales/03-autenticacion-cliente.md` cerrada: registro con password → verificar email → login, contra el backend ya implementado |
 | Listado de turnos disponibles / postularse | ❌ (ya especificado como `worker-on-demand/DOCS/specs/esenciales/04-app-worker-marketplace-turnos.md` — ver nota de organización en sección 7) |
 | Ver mi turno asignado / historial | ❌ |
-| Perfil del trabajador (ver/editar) | ❌ |
+| Perfil del trabajador (ver/editar) | ⚠️ Perfil mínimo (09-07): datos de sesión + logout + acceso a los pasos de identidad/MP. Edición real sigue siendo `extensiones/01-perfil-trabajador-editable.md`, no arrancada |
 | Registro de token de push notifications | ❌ |
 | Manejo de deep link al tocar una notificación | ❌ |
 | Pantalla de restaurante (registro, crear turno, elegir postulante) | ❌ — no hay ninguna evidencia de que esto viva en este repo ni en ningún otro (ver `worker-on-demand/DOCS/specs/esenciales/05-dashboard-restaurante.md`) |
-| Modo oscuro | ❌ (NativeWind lo soporta out-of-the-box, simplemente no se usó ninguna clase `dark:`) |
-| Manejo de sesión expirada / logout | ❌ |
+| Modo oscuro | ❌ (sigue sin arrancar; se fijó `darkMode: 'class'` en `tailwind.config.js` el 09-07 solo para evitar un crash de nativewind-web al leer `prefers-color-scheme`, no implementa la feature) |
+| Manejo de sesión expirada / logout | ✅ (09-07) — 401 dispara refresh automático y, si falla, logout + redirect a login (`src/api/httpClient.ts`) |
 
 ---
 
@@ -110,13 +112,15 @@ Leyenda: ✅ completo y alcanzable | ⚠️ construido pero con gaps | ❌ no ex
 
 - **Sin persistencia de estado** (`useOnboardingStore` sin `persist`): riesgo real de pérdida de progreso y registros duplicados/huérfanos en el backend.
 - **Sin manejo de errores de red consistente**: cada mutation maneja su error con un `Text`/`Alert` ad hoc (`(mutation.error as Error).message`) — funciona, pero no hay un patrón único ni manejo de "sin conexión" vs. "el servidor rechazó la request" vs. "error inesperado".
-- **Sin persistencia segura de sesión**: no aplica hoy porque no hay login, pero es un prerequisito para cuando lo haya (ver spec de seguridad correspondiente).
+- ~~Sin persistencia segura de sesión~~ — **resuelto 09-07**: `seguridad/01-almacenamiento-seguro-sesion.md` cerrada, `src/lib/secureSession.ts` guarda el bundle de sesión vía `expo-secure-store`. Excepción explícita: en **web** no persiste entre recargas (decisión de alcance de esa spec — `expo-secure-store` no tiene implementación ahí); además, probar el flujo de login vía `expo start --web` hoy choca con que el backend no tiene CORS configurado (bloquea el preflight `OPTIONS`, ver nota nueva abajo) — no afecta iOS/Android nativo.
 - **Sin manejo de permiso denegado permanentemente**: `CheckInScreen` pide permiso de cámara y, si no se otorga, muestra un botón para pedirlo de nuevo — pero si el usuario ya lo denegó "no preguntar de nuevo" (`canAskAgain: false`), ese botón no hace nada útil; falta un fallback que lleve a la configuración del sistema.
 - **Sin tests de ningún tipo.**
 - **Sin linter configurado** — nada evita, por ejemplo, un `console.log` olvidado o un import sin usar antes de mergear.
 - **Sin CI** — no hay `.github/workflows` en este repo tampoco (mismo gap que el backend).
 - **Sin configuración de build para stores** — `app.json` no define `icon` ni `splash` (la app usaría los defaults de Expo si se buildeara hoy), y no hay `eas.json` para builds de producción/preview vía EAS.
 - **Duplicación de reglas de negocio sin fuente única** (radio de geofence, catálogo de skills — ver sección 4) — funciona hoy porque son solo 2 valores, pero es un riesgo de desincronización silenciosa a futuro.
+- ~~El backend no tiene CORS configurado~~ — **resuelto 09-08** del lado backend (`SecurityConfig.kt`: `CorsConfigurationSource` + `CORS_ALLOWED_ORIGINS`, default `http://localhost:8081,http://localhost:19006`). Verificado con login real de punta a punta desde `expo start --web`.
+- **Hallazgo nuevo (09-07) — el repo nunca se había corrido de punta a punta**: no había `node_modules` instalado, y una vez instalado, `expo start --web` fallaba por dependencias de nativewind/reanimated incompletas (`react-native-worklets` faltante) y por faltar `react-native-web`/`react-dom` (declaradas como necesarias por el propio `expo` pero nunca agregadas). Se instalaron como parte de cerrar `esenciales/03` para poder verificar el trabajo visualmente; no hay evidencia de que se hubiera ejecutado la app (ni siquiera el onboarding original) antes de esta sesión.
 - **Nota de higiene de repo:** igual que se encontró en el backend, este working tree tiene **todos los archivos marcados como modificados por git** por una diferencia de fin de línea (CRLF/LF) — no es contenido real distinto, solo ruido de configuración de Windows/git. No requiere acción salvo que moleste al hacer diffs; si se quiere resolver, es un tema de `.gitattributes`/`core.autocrlf`, no de código.
 
 ---
@@ -135,13 +139,14 @@ No los duplico literalmnte acá para no generar dos fuentes de verdad del mismo 
 ## 8. Roadmap propuesto para este repo
 
 **Fase 0 — Cerrar lo que ya está construido**
-- Resolver el gap de configuración del deep link de Mercado Pago (sección 2) — es la corrección más barata y más urgente: una variable de entorno de un lado, no requiere código nuevo.
-- Agregar navegación y conectar `CheckInScreen` al flujo real.
+- Resolver el gap de configuración del deep link de Mercado Pago (sección 2) — es la corrección más barata y más urgente: una variable de entorno de un lado, no requiere código nuevo. **Sigue pendiente.**
+- ~~Agregar navegación y conectar `CheckInScreen` al flujo real.~~ ✅ 09-07.
 
 **Fase 1 — Prerequisitos de cualquier pantalla nueva**
-- Autenticación cliente (una vez que el backend la tenga).
-- Persistencia y resiliencia del onboarding.
-- Manejo de errores/estados de red consistente.
+- ~~Autenticación cliente (una vez que el backend la tenga).~~ ✅ 09-07 (backend ya la tenía; ver `esenciales/03-autenticacion-cliente.md`).
+- Persistencia y resiliencia del onboarding — **sigue pendiente** (`esenciales/04`); nota: con auth cerrada, los pasos de identidad/MP ahora corren *después* del login, así que esta spec también debe cubrir "qué pasa si cierro la app a mitad de esos pasos ya logueado", no solo el registro inicial.
+- Manejo de errores/estados de red consistente — sigue pendiente.
+- Nuevo, no estaba en el relevamiento original: decidir si se configura CORS en el backend para poder testear cómodo desde `expo start --web` (ver hallazgo en sección 6) — hoy solo se puede probar en iOS/Android.
 
 **Fase 2 — Completar el loop del trabajador**
 - Las pantallas de `esenciales/04-app-worker-marketplace-turnos.md` (del repo backend, ver sección 7).

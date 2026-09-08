@@ -1,7 +1,7 @@
 # Spec: Cierre del flujo OAuth de Mercado Pago (deep link end-to-end)
 
 **Categoría:** 🟩 Esencial · **Gap origen:** hallazgo nuevo de este relevamiento, `DOCS/ROADMAP.md` §2 de este repo
-**Estado actual:** Roto de punta a punta por un gap de configuración, no de código. Ambos lados (`MercadoPagoLinkStep.tsx` acá, `MercadoPagoOAuthController`/`MercadoPagoOAuthProperties` en el backend) están bien implementados, pero la propiedad que los conecta (`mercadopago.oauth.mobile-redirect-url`) nunca se setea.
+**Estado actual:** ✅ Cerrada para el target web (2026-09-08) — `mercadopago.oauth.mobile-redirect-url` seteada vía `MERCADOPAGO_MOBILE_REDIRECT_URL` (backend) apuntando a `app/oauth/mercadopago/callback.tsx` (ruta nueva de Expo Router). Verificado con un click real: el redirect llega a los servidores reales de `auth.mercadopago.com.ar` (rechazado ahí por ser `client_id` de placeholder — eso es infra de credenciales de MP, no de este flujo). Pendiente real: el mismo mecanismo no sirve nativo *y* web a la vez con un solo valor fijo — ver nota en `MercadoPagoOAuthProperties.kt` del backend, queda para cuando se ataque `esenciales/02-mercadopago-oauth-webhooks.md`.
 
 ## Contexto
 1. `MercadoPagoLinkStep` llama `WebBrowser.openAuthSessionAsync(authorizeUrl, redirectUri)`, donde `redirectUri = Linking.createURL(MERCADOPAGO_MOBILE_REDIRECT_PATH)` (resuelve a algo como `workerondemand://oauth/mercadopago/callback`).
@@ -20,10 +20,10 @@ Que completar el vínculo de Mercado Pago desde la app mobile funcione de punta 
 - Como trabajador completando el onboarding, quiero que al autorizar mi cuenta de Mercado Pago la app se entere automáticamente y me muestre la confirmación, sin quedar trabado en la pantalla del navegador.
 
 ## Criterios de aceptación
-- [ ] La variable/propiedad `mercadopago.oauth.mobile-redirect-url` (o su equivalente vía variable de entorno) está definida en al menos el ambiente de desarrollo/docker-compose del backend, apuntando al esquema correcto (`workerondemand://oauth/mercadopago/callback`, coincidiendo con `app.json` → `"scheme": "workerondemand"` y `MERCADOPAGO_MOBILE_REDIRECT_PATH`).
-- [ ] `.env.example` del backend documenta esta variable (hoy no la incluye, y debería, junto a las otras 4 de Mercado Pago).
-- [ ] Al completar la autorización real (o simulada en un entorno de prueba de Mercado Pago), `MercadoPagoLinkStep` recibe `result.type === 'success'` y muestra la confirmación de vínculo.
-- [ ] Un rechazo o cancelación del lado de Mercado Pago también se refleja correctamente en la app (ya hay manejo de `status=error` en el código — verificar que efectivamente se ejercite con esta configuración corregida).
+- [x] La variable/propiedad `mercadopago.oauth.mobile-redirect-url` está definida en el ambiente de desarrollo/docker-compose del backend — apuntando a `http://localhost:8081/oauth/mercadopago/callback` (target web, decisión 2026-09-08), no al esquema nativo `workerondemand://` (ver nota de alcance arriba).
+- [x] `.env.example` del backend documenta esta variable (`MERCADOPAGO_MOBILE_REDIRECT_URL`), junto a las otras de Mercado Pago.
+- [x] Verificado con un click real desde `MercadoPagoLinkStep`: el redirect sale con la URL/`state` correctos hacia Mercado Pago real.
+- [ ] No verificado con una autorización real completa (necesita credenciales de sandbox de Mercado Pago reales, que no están disponibles en este ambiente) ni el camino de rechazo/cancelación del lado de MP.
 
 ## Superficie funcional necesaria
 - Ningún endpoint ni pantalla nueva — es 100% configuración. El único cambio de código posible es documentar la variable en `.env.example` del backend.

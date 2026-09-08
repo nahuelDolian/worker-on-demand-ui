@@ -1,7 +1,7 @@
 # Spec: Autenticación Cliente
 
 **Categoría:** 🟩 Esencial · **Gap origen:** complemento directo de `worker-on-demand/DOCS/specs/esenciales/01-autenticacion-autorizacion.md` (backend) — esta spec es la mitad cliente
-**Estado actual:** No existe ninguna pantalla de login/registro más allá de `PersonalInfoStep` (que hoy registra, pero no autentica — no hay concepto de "sesión" en la app). El backend **ya implementa** el mecanismo completo (spec 01, cerrada del lado backend) — este documento es el contrato exacto contra el que construir el lado cliente.
+**Estado actual:** ✅ Implementada y verificada de punta a punta (2026-09-07/08), junto con sus dos prerequisitos (`esenciales/02-navegacion-y-enrutamiento.md`, `seguridad/01-almacenamiento-seguro-sesion.md`). Flujo completo: `PersonalInfoStep` pide contraseña y registra vía `POST /api/workers` → verificación de email → login explícito → área autenticada. Cliente HTTP centralizado (`src/api/httpClient.ts`) con Bearer automático y refresh-en-401. La verificación manual encontró que el backend no tenía CORS configurado (bloqueaba probar desde `expo start --web`, no desde iOS/Android) — **resuelto del lado backend el 09-08** (`worker-on-demand/.../SecurityConfig.kt`). Confirmado con un login real (`worker.test@workerondemand.local`) navegando registro → login → tabs → perfil → logout desde un browser real.
 
 ## Contexto
 El backend ya no es una API abierta: todo lo que muta estado de turno/usuario/pago exige un JWT (`Authorization: Bearer <accessToken>`), el registro exige una contraseña y verificación de email antes de poder loguearse, y las cuentas bloqueadas devuelven un motivo estructurado en vez de un booleano opaco. La app necesita: una forma de que el usuario se registre con contraseña, verifique su email, inicie sesión, guarde esa sesión de forma segura, la adjunte a cada request, y sepa manejar 401/403/bloqueo sin romperse.
@@ -136,16 +136,18 @@ Rutas que siguen públicas (sin cambios para esta app): `GET /api/mercadopago/oa
 3. Verificado el email, la app **no queda logueada sola** — muestra login (puede ser el mismo formulario con el email pre-cargado) → `POST /api/auth/login` → guardar `accessToken` + `refreshToken` en el almacenamiento seguro.
 4. El resto del onboarding (vínculo MP, carga de documentos) sigue con la sesión ya autenticada — el `workerId` para `identity-documents` tiene que coincidir con el usuario logueado (si no, 403).
 
+**Nota de implementación (2026-09-07):** el punto 4 se resolvió como dos pantallas independientes (`(app)/onboarding/identity` y `(app)/onboarding/mercadopago`), alcanzables desde el Perfil en vez de forzarse automáticamente después del login. Motivo: `UserResponse` no tiene ningún campo que indique "identidad ya subida" / "MP ya vinculado" — no hay forma de saber, al loguear a alguien, si ya completó esos pasos antes o es la primera vez. Forzar el redirect a esos pasos en cada login habría sido inventar una regla de producto que no está definida (¿se vuelve a mostrar siempre? ¿solo la primera vez, y cómo se sabe cuál es "la primera vez" sin ese campo?) — eso es, en rigor, el trabajo de `esenciales/04-persistencia-resiliencia-onboarding.md`, que todavía no arrancó. Dejarlos como acciones explícitas en el Perfil es el subconjunto de esta spec que se podía cerrar sin pisar esa decisión.
+
 ## Criterios de aceptación
-- [ ] `PersonalInfoStep` (o el paso que corresponda) pide contraseña y la manda en el registro.
-- [ ] Existe una pantalla de verificación de email (código + reenvío) entre el registro y el login.
-- [ ] Existe una pantalla de login funcional contra `POST /api/auth/login`.
-- [ ] La sesión (`accessToken` + `refreshToken`) persiste entre aperturas de la app (almacenamiento seguro, no AsyncStorage plano).
-- [ ] Cada request protegido adjunta `Authorization: Bearer <accessToken>`.
-- [ ] Un 401 en cualquier request dispara refresh automático (si hay `refreshToken` válido) y, si el refresh también falla, logout + redirección al login — nunca una pantalla rota en silencio.
-- [ ] Cerrar sesión llama a `POST /api/auth/logout`, limpia el estado local y redirige a una pantalla no protegida.
-- [ ] Una respuesta con `blockInfo` no nulo (login) o `error === "account_blocked"` (cualquier acción) muestra la explicación + remediación al usuario, no un error genérico.
-- [ ] Las pantallas protegidas (todo lo que no sea onboarding/login) verifican la sesión antes de renderizar contenido.
+- [x] `PersonalInfoStep` pide contraseña y la manda en el registro (`src/screens/onboarding/steps/PersonalInfoStep.tsx`, campo nuevo + `authApi.registerWorker`).
+- [x] Existe una pantalla de verificación de email (código + reenvío) entre el registro y el login (`src/screens/auth/VerifyEmailScreen.tsx`, ruta `(auth)/verify-email`).
+- [x] Existe una pantalla de login funcional contra `POST /api/auth/login` (`src/screens/auth/LoginScreen.tsx`, ruta `(auth)/login`).
+- [x] La sesión persiste entre aperturas de la app — `seguridad/01-almacenamiento-seguro-sesion.md`, con la excepción de web ya documentada ahí.
+- [x] Cada request protegido adjunta `Authorization: Bearer <accessToken>` — centralizado en `src/api/httpClient.ts`, ya no hay `fetch` sueltos en `src/api/*.ts`.
+- [x] Un 401 dispara refresh automático (single-flight: N requests en paralelo comparten el mismo refresh en vuelo, no disparan N) y, si el refresh también falla, limpia la sesión — el layout del área autenticada reacciona a `status !== 'signed-in'` y redirige al login solo. No se implementó refresh *proactivo* (antes de que expire) — el criterio de abajo solo pide el caso reactivo, que es el que quedó cubierto.
+- [x] Cerrar sesión llama a `POST /api/auth/logout`, limpia el estado local y redirige al login (`ProfileScreen` y `BlockedAccountScreen`, mismo patrón en ambos).
+- [x] `blockInfo` no nulo (login) o `error === "account_blocked"` (cualquier acción) muestra la explicación + remediación (`BlockedAccountScreen`) — el cliente HTTP detecta el segundo caso en cualquier response y actualiza el store para que se muestre igual que si hubiera venido del login.
+- [x] Las pantallas protegidas verifican la sesión antes de renderizar — guard centralizado en `app/(app)/_layout.tsx` (uno solo, no repetido por pantalla).
 
 ## Superficie funcional necesaria
 - Cliente HTTP (o el wrapper que ya usan las funciones de `src/api/`) que adjunte `Authorization: Bearer` en cada request protegido.
@@ -157,10 +159,10 @@ Rutas que siguen públicas (sin cambios para esta app): `GET /api/mercadopago/oa
 - El backend (`worker-on-demand/DOCS/specs/esenciales/01-autenticacion-autorizacion.md`) **ya está implementado** — esta spec puede arrancar sin bloqueos de ese lado.
 - Depende de `esenciales/02-navegacion-y-enrutamiento.md` (rutas protegidas) y `seguridad/01-almacenamiento-seguro-sesion.md` (dónde se guarda `accessToken`/`refreshToken`).
 
-## Decisiones técnicas pendientes (para vos)
-- Cómo se comparte el estado de sesión a través de la app (Context, Zustand — ya está en el proyecto —, o el mecanismo que traiga la librería de navegación elegida).
-- Si el cliente HTTP se centraliza en un wrapper único (reemplazando los `fetch` sueltos actuales de `src/api/`) como parte de esta spec, dado que hoy cada función arma su propio `fetch` sin ningún interceptor común — con el manejo de 401/refresh centralizado esto deja de ser opcional en la práctica.
-- Cómo se dispara el refresh automático sin condición de carrera (varios requests en paralelo que reciben 401 al mismo tiempo no deberían disparar N refreshes concurrentes).
+## Decisiones técnicas — resueltas (2026-09-07)
+- **Estado de sesión:** Zustand (`useSessionStore`) — no hizo falta preguntarlo, ya estaba fijado como convención del proyecto (`worker-on-demand/DOCS/CLAUDE.md` §3: "Zustand para local/global state, React Query para server state"), consistente con `useOnboardingStore` que ya existía.
+- **Cliente HTTP centralizado:** sí, decidido por Pilu — `src/api/httpClient.ts` reemplazó los `fetch` sueltos de `workerOnboardingApi.ts` y `checkInApi.ts`.
+- **Refresh sin condición de carrera:** single-flight vía una promesa compartida (`inFlightRefresh` en `httpClient.ts`) — el primer 401 dispara el refresh, cualquier otro request que llegue mientras tanto espera esa misma promesa en vez de disparar uno nuevo.
 
 ## Nota de infraestructura (para no perder tiempo reimplementando algo que ya existe)
 El envío de email de verificación hoy es un stub que solo loguea el código del lado backend (`LoggingVerificationCodeSender`, no hay Resend conectado todavía) — en cualquier ambiente de desarrollo vas a necesitar mirar los logs del backend para conseguir el código hasta que se conecte un proveedor real. No es un bug de esta spec, es un gap de infra ya documentado en el backend.

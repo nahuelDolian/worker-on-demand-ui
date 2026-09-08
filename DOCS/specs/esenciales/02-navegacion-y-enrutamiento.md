@@ -1,7 +1,7 @@
 # Spec: Navegación y Enrutamiento
 
 **Categoría:** 🟩 Esencial · **Gap origen:** `DOCS/ROADMAP.md` §5.2/§6, crítico #3 del roadmap combinado del proyecto
-**Estado actual:** `App.tsx` monta un único componente fijo (`WorkerOnboardingScreen`). No hay ninguna librería de navegación instalada. `CheckInScreen` existe y funciona pero es inalcanzable.
+**Estado actual:** ✅ Implementada (2026-09-07). Expo Router (file-based, `app/`), con `expo-secure-store`/`react-native-gesture-handler`/`react-native-screens`/`expo-constants` como dependencias nuevas. `App.tsx` se eliminó — el root layout (`app/_layout.tsx`) resuelve providers + gate de hidratación de sesión, y `app/index.tsx` redirige a `(auth)` o `(app)` según corresponda. `CheckInScreen` ahora es alcanzable desde el tab "Check-in" del área autenticada.
 
 ## Contexto
 Esta es la pieza de infraestructura sin la cual ninguna pantalla nueva (turnos disponibles, login, perfil, lo que sea) tiene forma de integrarse a la app. Es, en términos de esfuerzo, probablemente la spec más barata de esta lista con el mayor efecto desbloqueante.
@@ -22,10 +22,10 @@ Dar de alta un árbol de navegación real: que la app pueda moverse entre pantal
 - No aplica reglas de negocio nuevas — es puramente infraestructura de la app.
 
 ## Criterios de aceptación
-- [ ] Existe un árbol de navegación con al menos: onboarding (ya existente), check-in/check-out (ya existente, ahora alcanzable).
-- [ ] La navegación soporta deep linking (necesario para el callback de Mercado Pago — `esenciales/01` — y para abrir la app desde una notificación push más adelante).
-- [ ] El esquema de deep link configurado coincide con `app.json` (`"scheme": "workerondemand"`).
-- [ ] Agregar una pantalla nueva al árbol de navegación no requiere tocar `App.tsx` de forma invasiva (la estructura debería ser extensible).
+- [x] Existe un árbol de navegación con al menos: onboarding (ahora repartido entre `(auth)/register` — datos personales — y `(app)/onboarding/*` — identidad + Mercado Pago, autenticados), check-in/check-out (`(app)/(tabs)/checkin`, ahora alcanzable con toggle de modo).
+- [x] La navegación soporta deep linking — Expo Router usa el `"scheme"` de `app.json` automáticamente (file-based routing); no se probó todavía el callback real de Mercado Pago end-to-end (bloqueado aparte por `esenciales/01-cierre-oauth-mercadopago-deeplink.md`, gap de config ya documentado).
+- [x] El esquema de deep link configurado coincide con `app.json` (`"scheme": "workerondemand"`) — sin cambios, Expo Router lo toma de ahí directamente.
+- [x] Agregar una pantalla nueva es un archivo nuevo bajo `app/` — no se tocó `App.tsx` de forma invasiva porque **se eliminó** (Expo Router reemplaza ese patrón por diseño).
 
 ## Superficie funcional necesaria
 - Instalación y configuración de una librería de navegación.
@@ -36,6 +36,6 @@ Dar de alta un árbol de navegación real: que la app pueda moverse entre pantal
 - Ninguna hacia atrás. Es, junto con `esenciales/01`, lo primero a resolver.
 - Bloquea: `esenciales/03-autenticacion-cliente.md`, `esenciales/06-push-notifications-cliente.md`, y el spec externo de marketplace de turnos.
 
-## Decisiones técnicas pendientes (para vos)
-- React Navigation vs. Expo Router (dado que ya están en Expo managed workflow, Expo Router es una opción natural por integrarse mejor con deep linking basado en archivos — pero es una preferencia, no una necesidad).
-- Estructura de navegación: stack simple vs. tabs vs. una combinación, una vez que se sepa cuántas secciones de primer nivel va a tener la app (hoy son pocas, pero conviene pensarlo con lo que se sabe que viene: turnos, perfil, historial).
+## Decisiones técnicas — resueltas por Pilu (2026-09-07)
+- **Expo Router**, con **tabs desde el arranque** (no stack simple) — aunque hoy solo hay 2 tabs reales (Check-in, Perfil), se decidió no postergar el andamiaje de tabs para cuando lleguen turnos/historial.
+- **Estructura implementada:** `app/(app)/_layout.tsx` es un `Stack` que contiene un grupo `(tabs)` (Check-in + Perfil) como pantalla inicial, más `onboarding/identity` y `onboarding/mercadopago` como pantallas hermanas que se empujan por encima con back nativo (no son tabs — se decidió así para que tengan transición/gesto de "atrás" en vez del comportamiento de swap de un tab oculto). `app/(auth)/_layout.tsx` es un `Stack` simple (login/register/verify-email).
