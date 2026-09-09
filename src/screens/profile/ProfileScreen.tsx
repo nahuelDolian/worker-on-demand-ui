@@ -1,8 +1,8 @@
 import React from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
-import { logout as logoutRequest } from '../../api/authApi';
+import { logout as logoutRequest, logoutAllSessions } from '../../api/authApi';
 import { useSessionStore } from '../../store/useSessionStore';
 import { useOnboardingStore } from '../../store/useOnboardingStore';
 
@@ -35,6 +35,25 @@ export function ProfileScreen() {
     router.replace('/(auth)/login');
   }
 
+  async function doLogoutAll() {
+    await logoutAllSessions().catch(() => undefined); // best-effort: si falla la request, igual limpiamos localmente.
+    await clear();
+    router.replace('/(auth)/login');
+  }
+
+  function handleLogoutAll() {
+    const message = 'Vas a cerrar la sesión en todos tus dispositivos, no solo en este.';
+    // Alert.alert es un no-op en web (RN Web) — confirm() nativo del browser ahí, Alert en mobile.
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(message)) void doLogoutAll();
+      return;
+    }
+    Alert.alert('¿Cerrar todas las sesiones?', message, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Cerrar todas', style: 'destructive', onPress: () => void doLogoutAll() },
+    ]);
+  }
+
   return (
     <ScrollView className="flex-1 bg-white px-5 pt-6">
       <Text className="mb-1 text-2xl font-bold text-neutral-900">{user?.fullName ?? 'Mi cuenta'}</Text>
@@ -64,6 +83,13 @@ export function ProfileScreen() {
       <View className="mt-8">
         <PrimaryButton label="Cerrar sesión" onPress={handleLogout} />
       </View>
+      <Text
+        accessibilityRole="button"
+        onPress={handleLogoutAll}
+        className="mb-8 text-center text-sm font-medium text-red-600"
+      >
+        Cerrar sesión en todos mis dispositivos
+      </Text>
     </ScrollView>
   );
 }

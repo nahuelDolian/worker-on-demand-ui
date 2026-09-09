@@ -76,3 +76,10 @@ export async function login(email: string, password: string): Promise<StoredSess
 export async function logout(refreshToken: string): Promise<void> {
   return apiFetch<void>('/api/auth/logout', { method: 'POST', body: { refreshToken }, skipAuth: true });
 }
+
+/** `POST /api/auth/logout-all` (seguridad/03-gestion-sesiones-tokens.md) — a diferencia de `logout`,
+ * requiere sesión activa (la identidad sale del Bearer, no de un refreshToken en el body). Cierra
+ * todas las sesiones del caller, no solo la de este dispositivo. */
+export async function logoutAllSessions(): Promise<void> {
+  return apiFetch<void>('/api/auth/logout-all', { method: 'POST' });
+}

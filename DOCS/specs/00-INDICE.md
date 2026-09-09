@@ -29,6 +29,7 @@
 | 17 | [Analítica y crash reporting](extensiones/03-analitica-crash-reporting.md) | Extensión | Útil tenerlo temprano en la práctica, aunque no bloquea nada |
 | 18 | [Internacionalización](extensiones/04-internacionalizacion.md) | Extensión | Solo si se planea expandir fuera de Argentina |
 | 19 | [Accesibilidad avanzada](extensiones/05-accesibilidad-avanzada.md) | Extensión | La base ya es buena; esto es formalizarla |
+| 20 | [Rediseño UX + mapa/geocoding + emojis](extensiones/06-rediseno-ux-mapa-emojis.md) | Extensión | Placeholder (2026-09-09) — necesita su propia sesión de grilling (proveedor de mapa, alcance de emojis) antes de spliteares en specs concretas |
 
 ## Categorías
 🟩 **Esenciales** — sin esto la app no es usable de punta a punta o no es segura de operar.

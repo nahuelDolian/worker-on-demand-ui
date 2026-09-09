@@ -3,6 +3,8 @@
 **Categoría:** 🟩 Esencial · **Gap origen:** `DOCS/ROADMAP.md` §5.2/§6, crítico #3 del roadmap combinado del proyecto
 **Estado actual:** ✅ Implementada (2026-09-07). Expo Router (file-based, `app/`), con `expo-secure-store`/`react-native-gesture-handler`/`react-native-screens`/`expo-constants` como dependencias nuevas. `App.tsx` se eliminó — el root layout (`app/_layout.tsx`) resuelve providers + gate de hidratación de sesión, y `app/index.tsx` redirige a `(auth)` o `(app)` según corresponda. `CheckInScreen` ahora es alcanzable desde el tab "Check-in" del área autenticada.
 
+**Actualización (2026-09-08):** `roleHomeHref` (`src/lib/roleHome.ts`) ya no manda a un worker directo a Check-in ni a un restaurant directo al form de crear turno — ambos entran por su home (`(tabs)/index.tsx` / `(restaurant)/index.tsx`), construida en `esenciales/04-app-worker-marketplace-turnos.md` / `esenciales/05-dashboard-restaurante.md` (backend). El worker sumó un tab nuevo "Turnos" (`browse.tsx`, antes no existía ninguna pantalla de browse).
+
 ## Contexto
 Esta es la pieza de infraestructura sin la cual ninguna pantalla nueva (turnos disponibles, login, perfil, lo que sea) tiene forma de integrarse a la app. Es, en términos de esfuerzo, probablemente la spec más barata de esta lista con el mayor efecto desbloqueante.
 

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { apiFetch, API_BASE_URL } from './httpClient';
 import type { IdentityUploadValues } from '../screens/onboarding/schema';
 
@@ -12,15 +13,27 @@ import type { IdentityUploadValues } from '../screens/onboarding/schema';
  */
 export async function uploadIdentityDocuments(workerId: string, values: IdentityUploadValues): Promise<void> {
   const formData = new FormData();
-  formData.append('dniFront', toFormDataFile(values.dniFrontUri, 'dni-front.jpg'));
-  formData.append('dniBack', toFormDataFile(values.dniBackUri, 'dni-back.jpg'));
-  formData.append('selfie', toFormDataFile(values.selfieUri, 'selfie.jpg'));
+  formData.append('dniFront', await toFormDataFile(values.dniFrontUri), 'dni-front.jpg');
+  formData.append('dniBack', await toFormDataFile(values.dniBackUri), 'dni-back.jpg');
+  formData.append('selfie', await toFormDataFile(values.selfieUri), 'selfie.jpg');
 
   return apiFetch<void>(`/api/workers/${workerId}/identity-documents`, { method: 'POST', body: formData });
 }
 
-function toFormDataFile(uri: string, name: string): Blob {
-  return { uri, name, type: 'image/jpeg' } as unknown as Blob;
+/**
+ * BUG real encontrado (2026-09-08): en web, `FormData` es la implementación real del browser —
+ * necesita un `Blob` de verdad. El objeto `{uri, name, type}` de abajo es el pseudo-Blob que
+ * React Native (nativo) sabe leer directo del filesystem del device, pero el FormData del browser
+ * no lo entiende: lo serializa como texto "[object Object]" en vez de mandar el archivo, así que
+ * el backend nunca veía la part `dniFront`/`dniBack`/`selfie` (`MissingServletRequestPartException`
+ * en los logs). expo-image-picker en web devuelve un `uri` tipo `blob:...`, fetcheable.
+ */
+async function toFormDataFile(uri: string): Promise<Blob> {
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    return response.blob();
+  }
+  return { uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob;
 }
 
 /** Backend redirects here (302) straight into the Mercado Pago consent screen. Sigue pública

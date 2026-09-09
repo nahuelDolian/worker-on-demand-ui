@@ -161,8 +161,10 @@ export async function apiFetch<T = void>(path: string, options: ApiFetchOptions 
     throw new ApiError(response.status, code, blockInfo);
   }
 
-  if (response.status === 204) {
-    return undefined as T;
-  }
-  return (await response.json()) as T;
+  // No solo 204: cualquier respuesta 2xx puede venir sin body (ej. 202 Accepted de
+  // POST /applications, encontrado en vivo — `.json()` sobre un body vacío tira SyntaxError y la
+  // mutation lo toma como error aunque el request haya sido un éxito real). Se lee como texto
+  // primero y solo se parsea si hay contenido, en vez de hardcodear una lista de status codes.
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }

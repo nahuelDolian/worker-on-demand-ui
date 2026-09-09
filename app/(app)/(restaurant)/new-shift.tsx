@@ -1,5 +1,5 @@
 import { NewShiftScreen } from '../../../src/screens/restaurant/NewShiftScreen';
 
-export default function Shifts() {
+export default function NewShift() {
   return <NewShiftScreen />;
 }
