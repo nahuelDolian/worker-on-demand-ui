@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ShiftCard } from '../../components/ui/ShiftCard';
 import { listShifts } from '../../api/shiftsApi';
+import { getSkillEmojis } from '../../api/skillEmojisApi';
 import { distanceInMeters } from '../../lib/geo';
 import { mergePendingApplications } from '../../lib/workerFilters';
+import { resolveSkillEmoji } from '../../lib/skillEmojis';
 import { useSessionStore } from '../../store/useSessionStore';
 
 /**
@@ -74,6 +77,10 @@ export function WorkerHomeScreen() {
       }),
     enabled: coords !== null,
   });
+  // extensiones/07-rediseno-visual-y-animaciones.md: mismo lenguaje visual que NewShiftScreen —
+  // emoji por skill en cada ShiftCard (spec 08 lo dejó pendiente acá, esta pantalla no estaba en
+  // su lista original de componentes tocados).
+  const skillEmojisQuery = useQuery({ queryKey: ['skill-emojis'], queryFn: getSkillEmojis });
 
   const isRefreshing = activeShiftsQuery.isFetching || pendingApplicationsQuery.isFetching || nearbyShiftsQuery.isFetching;
   const refresh = () => {
@@ -92,67 +99,78 @@ export function WorkerHomeScreen() {
       <Text className="mb-1 text-2xl font-bold text-neutral-900">Hola{fullName ? `, ${fullName.split(' ')[0]}` : ''} 👋</Text>
       <Text className="mb-6 text-base text-neutral-500">Esto es lo que está pasando con tus turnos.</Text>
 
-      <Text className="mb-2 text-lg font-semibold text-neutral-900">Tu turno activo</Text>
-      {activeShiftsQuery.isLoading ? (
-        <ActivityIndicator className="mb-6" />
-      ) : activeShift ? (
-        <ShiftCard
-          shift={activeShift}
-          onPress={() => router.push(`/(app)/(tabs)/checkin`)}
-          actionLabel={activeShift.status === 'MATCHED' ? 'Ir a check-in' : undefined}
-          onAction={activeShift.status === 'MATCHED' ? () => router.push('/(app)/(tabs)/checkin') : undefined}
-        />
-      ) : (
-        <View className="mb-6 rounded-xl border border-dashed border-neutral-300 p-4">
-          <Text className="text-sm text-neutral-500">No tenés ningún turno activo ahora mismo.</Text>
-        </View>
-      )}
+      <Animated.View entering={FadeInDown.duration(350).delay(20)}>
+        <Text className="mb-2 text-lg font-semibold text-neutral-900">Tu turno activo</Text>
+        {activeShiftsQuery.isLoading ? (
+          <ActivityIndicator className="mb-6" />
+        ) : activeShift ? (
+          <ShiftCard
+            shift={activeShift}
+            onPress={() => router.push(`/(app)/(tabs)/checkin`)}
+            actionLabel={activeShift.status === 'MATCHED' ? 'Ir a check-in' : undefined}
+            onAction={activeShift.status === 'MATCHED' ? () => router.push('/(app)/(tabs)/checkin') : undefined}
+            skillEmoji={resolveSkillEmoji(activeShift.requiredSkill, skillEmojisQuery.data)}
+          />
+        ) : (
+          <View className="mb-6 rounded-2xl border border-dashed border-neutral-300 p-4">
+            <Text className="text-sm text-neutral-500">No tenés ningún turno activo ahora mismo.</Text>
+          </View>
+        )}
+      </Animated.View>
 
       {(pendingApplicationsQuery.data ?? []).length > 0 ? (
-        <>
+        <Animated.View entering={FadeInDown.duration(350).delay(80)}>
           <Text className="mb-2 text-lg font-semibold text-neutral-900">Mis postulaciones pendientes</Text>
           {(pendingApplicationsQuery.data ?? []).map((shift) => (
-            <ShiftCard key={shift.id} shift={shift} onPress={() => router.push('/(app)/(tabs)/browse')} />
+            <ShiftCard
+              key={shift.id}
+              shift={shift}
+              onPress={() => router.push('/(app)/(tabs)/browse')}
+              skillEmoji={resolveSkillEmoji(shift.requiredSkill, skillEmojisQuery.data)}
+            />
           ))}
           <View className="h-2" />
-        </>
+        </Animated.View>
       ) : null}
 
-      <View className="mb-2 flex-row items-center justify-between">
-        <Text className="text-lg font-semibold text-neutral-900">Turnos cerca</Text>
-        <Text
-          accessibilityRole="button"
-          onPress={() => router.push('/(app)/(tabs)/browse')}
-          className="text-sm font-medium text-emerald-700"
-        >
-          Ver todos y filtrar
-        </Text>
-      </View>
-
-      {locationDenied ? (
-        <View className="mb-6 rounded-xl border border-dashed border-neutral-300 p-4">
-          <Text className="text-sm text-neutral-500">
-            Necesitamos tu ubicación para mostrarte turnos cerca — habilitala desde ajustes, o buscá manualmente.
+      <Animated.View entering={FadeInDown.duration(350).delay(140)}>
+        <View className="mb-2 flex-row items-center justify-between">
+          <Text className="text-lg font-semibold text-neutral-900">Turnos cerca</Text>
+          <Text
+            accessibilityRole="button"
+            onPress={() => router.push('/(app)/(tabs)/browse')}
+            className="text-sm font-medium text-emerald-700"
+          >
+            Ver todos y filtrar
           </Text>
         </View>
-      ) : nearbyShiftsQuery.isLoading ? (
-        <ActivityIndicator className="mb-6" />
-      ) : (nearbyShiftsQuery.data ?? []).length === 0 ? (
-        <View className="mb-6 rounded-xl border border-dashed border-neutral-300 p-4">
-          <Text className="text-sm text-neutral-500">No hay turnos disponibles cerca tuyo por ahora.</Text>
-        </View>
-      ) : (
-        (nearbyShiftsQuery.data ?? []).slice(0, 4).map((shift) => (
-          <ShiftCard
-            key={shift.id}
-            shift={shift}
-            distanceMeters={
-              coords ? distanceInMeters(coords, { latitude: shift.shiftLat, longitude: shift.shiftLng }) : undefined
-            }
-            onPress={() => router.push('/(app)/(tabs)/browse')}
-          />
-        ))
-      )}
+
+        {locationDenied ? (
+          <View className="mb-6 rounded-2xl border border-dashed border-neutral-300 p-4">
+            <Text className="text-sm text-neutral-500">
+              Necesitamos tu ubicación para mostrarte turnos cerca — habilitala desde ajustes, o buscá manualmente.
+            </Text>
+          </View>
+        ) : nearbyShiftsQuery.isLoading ? (
+          <ActivityIndicator className="mb-6" />
+        ) : (nearbyShiftsQuery.data ?? []).length === 0 ? (
+          <View className="mb-6 rounded-2xl border border-dashed border-neutral-300 p-4">
+            <Text className="text-sm text-neutral-500">No hay turnos disponibles cerca tuyo por ahora.</Text>
+          </View>
+        ) : (
+          (nearbyShiftsQuery.data ?? []).slice(0, 4).map((shift) => (
+            <ShiftCard
+              key={shift.id}
+              shift={shift}
+              distanceMeters={
+                coords ? distanceInMeters(coords, { latitude: shift.shiftLat, longitude: shift.shiftLng }) : undefined
+              }
+              onPress={() => router.push('/(app)/(tabs)/browse')}
+              skillEmoji={resolveSkillEmoji(shift.requiredSkill, skillEmojisQuery.data)}
+            />
+          ))
+        )}
+      </Animated.View>
 
       <View className="h-6" />
     </ScrollView>
