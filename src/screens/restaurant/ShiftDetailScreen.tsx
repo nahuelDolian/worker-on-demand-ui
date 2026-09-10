@@ -6,8 +6,10 @@ import { PrimaryButton } from '../../components/ui/PrimaryButton';
 import { ShiftCard } from '../../components/ui/ShiftCard';
 import { cancelShift, getApplicants, selectWorker, type ApplicantDto } from '../../api/restaurantApi';
 import { getShift } from '../../api/shiftsApi';
+import { getSkillEmojis } from '../../api/skillEmojisApi';
 import { ApiError } from '../../api/httpClient';
 import { describeSelectWorkerErrorCode } from '../../lib/shiftErrors';
+import { resolveSkillEmoji } from '../../lib/skillEmojis';
 import { WORKER_SKILLS } from '../../constants/skills';
 
 function skillLabel(skill: string): string {
@@ -26,6 +28,7 @@ export function ShiftDetailScreen({ shiftId }: { shiftId: string }) {
 
   const shiftQuery = useQuery({ queryKey: ['shift', shiftId], queryFn: () => getShift(shiftId) });
   const shift = shiftQuery.data;
+  const skillEmojisQuery = useQuery({ queryKey: ['skill-emojis'], queryFn: getSkillEmojis });
 
   const applicantsQuery = useQuery({
     queryKey: ['shift', shiftId, 'applicants'],
@@ -79,7 +82,7 @@ export function ShiftDetailScreen({ shiftId }: { shiftId: string }) {
 
   return (
     <ScrollView className="flex-1 bg-white px-5 pt-6">
-      <ShiftCard shift={shift} />
+      <ShiftCard shift={shift} skillEmoji={resolveSkillEmoji(shift.requiredSkill, skillEmojisQuery.data)} />
 
       {shift.status === 'SELECTION_PENDING' ? (
         <>

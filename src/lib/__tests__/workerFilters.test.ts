@@ -13,6 +13,8 @@ function aShift(overrides: Partial<ShiftResponseDto> & Pick<ShiftResponseDto, 'i
     endTime: '2026-09-10T23:00:00Z',
     shiftLat: -34.6,
     shiftLng: -58.4,
+    shiftAddress: null,
+    shiftPlaceId: null,
     mpPreauthId: null,
     cancellationPenaltyPreview: null,
     ...overrides,

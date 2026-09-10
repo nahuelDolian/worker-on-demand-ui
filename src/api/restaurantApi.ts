@@ -31,6 +31,10 @@ export interface ShiftResponseDto {
   endTime: string;
   shiftLat: number;
   shiftLng: number;
+  /** extensiones/09-geocoding-direcciones-new-shift.md: null si el geocoding/reverse-geocoding
+   * falló y se cargaron las coordenadas a mano. */
+  shiftAddress: string | null;
+  shiftPlaceId: string | null;
   mpPreauthId: string | null;
   /** esenciales/05-dashboard-restaurante.md, segunda vuelta: null salvo MATCHED con <1h para el inicio. */
   cancellationPenaltyPreview: number | null;
@@ -44,6 +48,8 @@ export interface CreateShiftPayload {
   endTime: string;
   shiftLat: number;
   shiftLng: number;
+  shiftAddress?: string;
+  shiftPlaceId?: string;
 }
 
 /** `POST /api/shifts` — 201, crea el turno en DRAFT. 400 si `startTime` ya pasó o está a más de
