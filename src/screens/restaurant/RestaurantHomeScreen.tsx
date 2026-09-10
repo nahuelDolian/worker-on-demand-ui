@@ -12,9 +12,7 @@ import { useSessionStore } from '../../store/useSessionStore';
  * comportamiento de caer directo en "publicar turno". 3 buckets, mapeo de estados resuelto por
  * Pilu (2026-09-08): Abiertos = buscando trabajador; Matcheados = asignado, no arrancó; En curso.
  *
- * NOTA (alcance de este incremento): tocar una card no lleva a "ver postulantes/elegir" — ese
- * flujo necesita un endpoint nuevo (listar postulantes con detalle) que la spec ya documenta como
- * pendiente, no construido en esta vuelta. Por ahora las cards son solo informativas.
+ * Segunda vuelta: tocar una card lleva a `ShiftDetailScreen` (ver postulantes/elegir/cancelar).
  */
 const BUCKETS: { title: string; statuses: ShiftStatus[] }[] = [
   { title: 'Abiertos', statuses: ['AWAITING_HOLD', 'BROADCASTING', 'SELECTION_PENDING'] },
@@ -69,7 +67,9 @@ export function RestaurantHomeScreen() {
                   <Text className="text-sm text-neutral-500">Nada acá por ahora.</Text>
                 </View>
               ) : (
-                shifts.map((shift) => <ShiftCard key={shift.id} shift={shift} />)
+                shifts.map((shift) => (
+                  <ShiftCard key={shift.id} shift={shift} onPress={() => router.push(`/(app)/shift/${shift.id}`)} />
+                ))
               )}
             </View>
           );

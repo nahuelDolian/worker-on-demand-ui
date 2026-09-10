@@ -28,6 +28,9 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(restaurant)" options={{ headerShown: false }} />
       <Stack.Screen name="admin-placeholder" options={{ headerShown: false }} />
+      {/* esenciales/05-dashboard-restaurante.md: detalle de turno (ver postulantes/elegir/cancelar)
+          — pushed screen compartida fuera de los tabs, mismo patrón que onboarding/*. */}
+      <Stack.Screen name="shift/[shiftId]" options={{ title: 'Turno' }} />
       <Stack.Screen name="onboarding/identity" options={{ title: 'Verificación de identidad' }} />
       <Stack.Screen name="onboarding/mercadopago" options={{ title: 'Mercado Pago' }} />
     </Stack>

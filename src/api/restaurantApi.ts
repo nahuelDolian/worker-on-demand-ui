@@ -69,3 +69,33 @@ export interface PlatformCommissionDto {
 export async function getPlatformCommission(): Promise<PlatformCommissionDto> {
   return apiFetch<PlatformCommissionDto>('/api/platform-commission');
 }
+
+/** esenciales/05-dashboard-restaurante.md: postulante visible para el restaurante — nunca fotos
+ * ni documentos de identidad (ADR-0001). */
+export interface ApplicantDto {
+  workerId: string;
+  fullName: string | null;
+  skills: string[];
+  trustScore: number;
+}
+
+/** `GET /api/shifts/{shiftId}/applicants` — 403 si el caller no es el dueño del turno. */
+export async function getApplicants(shiftId: string): Promise<ApplicantDto[]> {
+  return apiFetch<ApplicantDto[]>(`/api/shifts/${shiftId}/applicants`);
+}
+
+/** `POST /api/shifts/{id}/select-worker` — SELECTION_PENDING -> MATCHED. 409
+ * `worker_already_matched_elsewhere` (issue #17) si el worker ya quedó MATCHED en otro turno
+ * en el ínterin — elegir otro postulante de la lista. */
+export async function selectWorker(shiftId: string, workerId: string): Promise<ShiftResponseDto> {
+  return apiFetch<ShiftResponseDto>(`/api/shifts/${shiftId}/select-worker`, {
+    method: 'POST',
+    body: { workerId },
+  });
+}
+
+/** `POST /api/shifts/{id}/cancel` — SPEC.md Domain 4.3: si falta menos de 1h, captura una
+ * penalidad del 50% (va al worker); si no, libera el 100% del hold. */
+export async function cancelShift(shiftId: string): Promise<ShiftResponseDto> {
+  return apiFetch<ShiftResponseDto>(`/api/shifts/${shiftId}/cancel`, { method: 'POST' });
+}
