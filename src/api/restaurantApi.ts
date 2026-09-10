@@ -32,6 +32,8 @@ export interface ShiftResponseDto {
   shiftLat: number;
   shiftLng: number;
   mpPreauthId: string | null;
+  /** esenciales/05-dashboard-restaurante.md, segunda vuelta: null salvo MATCHED con <1h para el inicio. */
+  cancellationPenaltyPreview: number | null;
 }
 
 export interface CreateShiftPayload {
@@ -55,4 +57,15 @@ export async function createShift(payload: CreateShiftPayload): Promise<ShiftRes
  * si Mercado Pago lo rechaza. */
 export async function requestHold(shiftId: string): Promise<ShiftResponseDto> {
   return apiFetch<ShiftResponseDto>(`/api/shifts/${shiftId}/request-hold`, { method: 'POST' });
+}
+
+export interface PlatformCommissionDto {
+  applicationFeePercentage: number;
+}
+
+/** `GET /api/platform-commission` — esenciales/02-mercadopago-oauth-webhooks.md, "Gap nuevo":
+ * público (sin restricción de rol, el % no es sensible), reemplaza el 10% que `NewShiftScreen`
+ * tenía hardcodeado. */
+export async function getPlatformCommission(): Promise<PlatformCommissionDto> {
+  return apiFetch<PlatformCommissionDto>('/api/platform-commission');
 }

@@ -3,15 +3,21 @@ import { ScrollView, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { FormTextField } from '../../components/ui/FormTextField';
 import { SkillChip } from '../../components/ui/SkillChip';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 import { WORKER_SKILLS } from '../../constants/skills';
-import { createShift, requestHold, ShiftResponseDto } from '../../api/restaurantApi';
+import { createShift, getPlatformCommission, requestHold, ShiftResponseDto } from '../../api/restaurantApi';
 import { ApiError } from '../../api/httpClient';
+import { computeAppFee } from '../../lib/commission';
 import { CreateShiftValues, createShiftSchema } from './schema';
+
+// esenciales/02-mercadopago-oauth-webhooks.md, "Gap nuevo": fallback solo para el instante entre
+// el primer render y que resuelva GET /api/platform-commission — nunca lo que termina cobrándose
+// (eso lo decide el backend server-side, siempre).
+const DEFAULT_COMMISSION_PERCENTAGE = 10;
 
 /** SPEC.md Domain 3A: crea el turno (DRAFT) y en el mismo paso pide el hold — DRAFT ->
  * AWAITING_HOLD -> BROADCASTING. Alcance de este incremento (decisión de Pilu 2026-09-08): solo
@@ -48,9 +54,16 @@ export function NewShiftScreen() {
   // vía el resolver de zod en handleSubmit, no acá. Se parsea a mano para el preview en vivo.
   const baseAmountValue = Number(watch('baseAmount'));
   const hasValidBaseAmount = !Number.isNaN(baseAmountValue) && baseAmountValue > 0;
-  // SPEC.md Domain 3B: 10% de app fee — se deriva acá, no se le pide al restaurante que lo
-  // calcule (y así el cliente nunca manda un split distinto al fijado en la spec).
-  const appFee = hasValidBaseAmount ? Math.round(baseAmountValue * 0.1) : 0;
+
+  // esenciales/02-mercadopago-oauth-webhooks.md, "Gap nuevo": ya no hardcodea 10% — lee el % vigente.
+  // SPEC.md Domain 3B: la cuenta en sí (baseAmount × %) se deriva acá solo para el preview; el
+  // backend la vuelve a calcular server-side y es lo único que realmente importa (ShiftController.create).
+  const commissionQuery = useQuery({
+    queryKey: ['platform-commission'],
+    queryFn: getPlatformCommission,
+  });
+  const commissionPercentage = commissionQuery.data?.applicationFeePercentage ?? DEFAULT_COMMISSION_PERCENTAGE;
+  const appFee = computeAppFee(hasValidBaseAmount ? baseAmountValue : 0, commissionPercentage);
 
   const publishMutation = useMutation({
     mutationFn: async (values: CreateShiftValues) => {
@@ -59,7 +72,7 @@ export function NewShiftScreen() {
       const shift = await createShift({
         requiredSkill: values.requiredSkill,
         baseAmount: values.baseAmount,
-        appFee: Math.round(values.baseAmount * 0.1),
+        appFee: computeAppFee(values.baseAmount, commissionPercentage),
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         shiftLat: values.shiftLat,
@@ -151,7 +164,8 @@ export function NewShiftScreen() {
         placeholder="15000"
       />
       <Text className="-mt-3 mb-4 text-sm text-neutral-500">
-        + ${appFee} de fee de plataforma (10%, se calcula solo) = ${(hasValidBaseAmount ? baseAmountValue : 0) + appFee} total del hold.
+        + ${appFee} de fee de plataforma ({commissionPercentage}%, se calcula solo) = $
+        {(hasValidBaseAmount ? baseAmountValue : 0) + appFee} total del hold.
       </Text>
 
       <FormTextField control={control} name="date" label="Fecha" placeholder="2026-09-10" maxLength={10} />
