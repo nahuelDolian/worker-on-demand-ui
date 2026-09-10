@@ -1,6 +1,6 @@
-export type CheckMode = 'CHECK_IN' | 'CHECK_OUT';
+import { apiFetch } from './httpClient';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
+export type CheckMode = 'CHECK_IN' | 'CHECK_OUT';
 
 export interface ShiftLocation {
   shiftId: string;
@@ -8,15 +8,9 @@ export interface ShiftLocation {
   longitude: number;
 }
 
-/** TODO(backend): not implemented yet. Expected to return the shift's authoritative location. */
+/** `GET /api/shifts/{id}/location` — requiere ser RESTAURANT o WORKER parte del turno. */
 export async function fetchShiftLocation(shiftId: string): Promise<ShiftLocation> {
-  const response = await fetch(`${API_BASE_URL}/api/shifts/${shiftId}/location`);
-
-  if (!response.ok) {
-    throw new Error(`No se pudo obtener la ubicación del turno (HTTP ${response.status})`);
-  }
-
-  return (await response.json()) as ShiftLocation;
+  return apiFetch<ShiftLocation>(`/api/shifts/${shiftId}/location`);
 }
 
 export interface SubmitCheckPayload {
@@ -27,21 +21,16 @@ export interface SubmitCheckPayload {
   scannedAt: string;
 }
 
-/** TODO(backend): not implemented yet. Expected to apply shift.checked_in / shift.checked_out. */
+/** `POST /api/shifts/{id}/check-in` o `/check-out` — requiere ser el WORKER asignado al turno. */
 export async function submitCheck(payload: SubmitCheckPayload): Promise<void> {
   const endpoint = payload.mode === 'CHECK_IN' ? 'check-in' : 'check-out';
 
-  const response = await fetch(`${API_BASE_URL}/api/shifts/${payload.shiftId}/${endpoint}`, {
+  return apiFetch<void>(`/api/shifts/${payload.shiftId}/${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+    body: {
       latitude: payload.latitude,
       longitude: payload.longitude,
       scannedAt: payload.scannedAt,
-    }),
+    },
   });
-
-  if (!response.ok) {
-    throw new Error(`No se pudo registrar el ${endpoint} (HTTP ${response.status})`);
-  }
 }

@@ -3,16 +3,18 @@ import { ScrollView, Text, View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { FormTextField } from '../../../components/ui/FormTextField';
 import { SkillChip } from '../../../components/ui/SkillChip';
 import { PrimaryButton } from '../../../components/ui/PrimaryButton';
 import { WORKER_SKILLS } from '../../../constants/skills';
-import { registerWorkerPersonalInfo } from '../../../api/workerOnboardingApi';
-import { useOnboardingStore } from '../../../store/useOnboardingStore';
+import { registerWorker } from '../../../api/authApi';
 import { PersonalInfoValues, personalInfoSchema } from '../schema';
 
+/** Paso 1 del registro (`esenciales/03-autenticacion-cliente.md`): `POST /api/workers` con
+ * password incluida. No deja logueado — el flujo sigue en la pantalla de verificación de email. */
 export function PersonalInfoStep() {
-  const setPersonalInfo = useOnboardingStore((state) => state.setPersonalInfo);
+  const router = useRouter();
 
   const {
     control,
@@ -22,17 +24,19 @@ export function PersonalInfoStep() {
     formState: { errors },
   } = useForm<PersonalInfoValues>({
     resolver: zodResolver(personalInfoSchema),
-    defaultValues: { fullName: '', email: '', cuitCuil: '', skills: [] },
+    defaultValues: { fullName: '', email: '', cuitCuil: '', password: '', skills: [] },
     mode: 'onBlur',
   });
 
   const selectedSkills = watch('skills');
 
-  const registerMutation = useMutation({ mutationFn: registerWorkerPersonalInfo });
+  const registerMutation = useMutation({
+    mutationFn: (values: PersonalInfoValues) => registerWorker(values),
+  });
 
   const onSubmit = handleSubmit(async (values) => {
-    const { workerId } = await registerMutation.mutateAsync(values);
-    setPersonalInfo(values, workerId);
+    await registerMutation.mutateAsync(values);
+    router.push({ pathname: '/(auth)/verify-email', params: { email: values.email } });
   });
 
   function toggleSkill(skillValue: string) {
@@ -41,6 +45,13 @@ export function PersonalInfoStep() {
       : [...selectedSkills, skillValue];
     setValue('skills', next, { shouldValidate: true });
   }
+
+  // El backend no distingue hoy con un código estable "email ya registrado" de "CUIT ya
+  // registrado" de otro 400/500 de validación (`IllegalArgumentException`/constraint de DB sin
+  // mapear) — hasta que lo haga, el mensaje queda genérico en vez de adivinar cuál fue.
+  const registerError = registerMutation.isError
+    ? 'No pudimos crear tu cuenta. Puede que el email o el CUIT/CUIL ya estén registrados — revisá los datos e intentá de nuevo.'
+    : null;
 
   return (
     <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
@@ -73,6 +84,15 @@ export function PersonalInfoStep() {
         placeholder="20-12345678-3"
         maxLength={13}
       />
+      <FormTextField
+        control={control}
+        name="password"
+        label="Contraseña"
+        secureTextEntry
+        autoCapitalize="none"
+        autoComplete="password-new"
+        placeholder="Mínimo 8 caracteres"
+      />
 
       <Text className="mb-2 text-sm font-medium text-neutral-700">Micro-habilidades</Text>
       <View className="mb-2 flex-row flex-wrap">
@@ -91,9 +111,9 @@ export function PersonalInfoStep() {
         </Text>
       ) : null}
 
-      {registerMutation.isError ? (
+      {registerError ? (
         <Text accessibilityRole="alert" className="mb-4 text-sm text-red-600">
-          {(registerMutation.error as Error).message}
+          {registerError}
         </Text>
       ) : null}
 
@@ -101,8 +121,16 @@ export function PersonalInfoStep() {
         label="Continuar"
         onPress={onSubmit}
         loading={registerMutation.isPending}
-        accessibilityHint="Guarda tus datos personales y avanza al siguiente paso"
+        accessibilityHint="Crea tu cuenta y avanza a la verificación de email"
       />
+
+      <Text
+        accessibilityRole="button"
+        onPress={() => router.push('/(auth)/login')}
+        className="mb-8 text-center text-sm font-medium text-emerald-700"
+      >
+        ¿Ya tenés cuenta? Iniciá sesión
+      </Text>
     </ScrollView>
   );
 }
