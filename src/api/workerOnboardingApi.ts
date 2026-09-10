@@ -11,6 +11,18 @@ import type { IdentityUploadValues } from '../screens/onboarding/schema';
  * `POST /api/workers/{workerId}/identity-documents` — requiere estar autenticado como ese mismo
  * `workerId` (WORKER); `apiFetch` adjunta el Bearer automáticamente. 204 en éxito.
  */
+export interface WorkerProfileSummaryDto {
+  skills: string[];
+  trustScore: number;
+  dniVerified: boolean;
+}
+
+/** `GET /api/workers/me` — esenciales/04-app-worker-marketplace-turnos.md, segunda vuelta.
+ * Nunca incluye URLs de documentos (ADR-0001, mismo criterio que /identity-documents). */
+export async function getMyWorkerProfile(): Promise<WorkerProfileSummaryDto> {
+  return apiFetch<WorkerProfileSummaryDto>('/api/workers/me');
+}
+
 export async function uploadIdentityDocuments(workerId: string, values: IdentityUploadValues): Promise<void> {
   const formData = new FormData();
   formData.append('dniFront', await toFormDataFile(values.dniFrontUri), 'dni-front.jpg');

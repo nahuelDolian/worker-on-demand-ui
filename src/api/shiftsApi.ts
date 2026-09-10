@@ -18,6 +18,9 @@ export interface ListShiftsParams {
   startTimeTo?: string;
   minAmount?: number;
   maxAmount?: number;
+  /** esenciales/04, segunda vuelta: para WORKER + status=BROADCASTING, filtra a solo las
+   * postulaciones propias todavía sin resolver en vez del mercado completo. */
+  mine?: boolean;
 }
 
 export async function listShifts(params: ListShiftsParams): Promise<ShiftResponseDto[]> {

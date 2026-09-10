@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { ShiftCard } from '../../components/ui/ShiftCard';
 import { listShifts } from '../../api/shiftsApi';
 import { distanceInMeters } from '../../lib/geo';
+import { mergePendingApplications } from '../../lib/workerFilters';
 import { useSessionStore } from '../../store/useSessionStore';
 
 /**
@@ -48,6 +49,20 @@ export function WorkerHomeScreen() {
     },
   });
 
+  // esenciales/04-app-worker-marketplace-turnos.md, segunda vuelta: "mis postulaciones
+  // pendientes" — antes no se veían en ningún lado (el home solo mostraba el turno si ya
+  // estaba MATCHED). BROADCASTING con mine=true (no el mercado completo) + SELECTION_PENDING.
+  const pendingApplicationsQuery = useQuery({
+    queryKey: ['worker-home', 'pending-applications'],
+    queryFn: async () => {
+      const [broadcasting, selectionPending] = await Promise.all([
+        listShifts({ status: 'BROADCASTING', mine: true }),
+        listShifts({ status: 'SELECTION_PENDING' }),
+      ]);
+      return mergePendingApplications(broadcasting, selectionPending);
+    },
+  });
+
   const nearbyShiftsQuery = useQuery({
     queryKey: ['worker-home', 'nearby-shifts', coords?.latitude, coords?.longitude],
     queryFn: () =>
@@ -60,9 +75,10 @@ export function WorkerHomeScreen() {
     enabled: coords !== null,
   });
 
-  const isRefreshing = activeShiftsQuery.isFetching || nearbyShiftsQuery.isFetching;
+  const isRefreshing = activeShiftsQuery.isFetching || pendingApplicationsQuery.isFetching || nearbyShiftsQuery.isFetching;
   const refresh = () => {
     activeShiftsQuery.refetch();
+    pendingApplicationsQuery.refetch();
     nearbyShiftsQuery.refetch();
   };
 
@@ -91,6 +107,16 @@ export function WorkerHomeScreen() {
           <Text className="text-sm text-neutral-500">No tenés ningún turno activo ahora mismo.</Text>
         </View>
       )}
+
+      {(pendingApplicationsQuery.data ?? []).length > 0 ? (
+        <>
+          <Text className="mb-2 text-lg font-semibold text-neutral-900">Mis postulaciones pendientes</Text>
+          {(pendingApplicationsQuery.data ?? []).map((shift) => (
+            <ShiftCard key={shift.id} shift={shift} onPress={() => router.push('/(app)/(tabs)/browse')} />
+          ))}
+          <View className="h-2" />
+        </>
+      ) : null}
 
       <View className="mb-2 flex-row items-center justify-between">
         <Text className="text-lg font-semibold text-neutral-900">Turnos cerca</Text>

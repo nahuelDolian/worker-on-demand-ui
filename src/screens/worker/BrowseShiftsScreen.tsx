@@ -6,21 +6,24 @@ import { ShiftCard } from '../../components/ui/ShiftCard';
 import { SkillChip } from '../../components/ui/SkillChip';
 import { WORKER_SKILLS } from '../../constants/skills';
 import { applyToShift, listShifts } from '../../api/shiftsApi';
+import { getMyWorkerProfile } from '../../api/workerOnboardingApi';
 import { ApiError } from '../../api/httpClient';
 import { distanceInMeters } from '../../lib/geo';
+import { defaultSkillFilter } from '../../lib/workerFilters';
 
 const RADIUS_OPTIONS_KM = [5, 15, 30, 50];
 
 /**
  * esenciales/04-app-worker-marketplace-turnos.md: "ver turnos disponibles... postularse... saber
- * si ya llegó al cupo". Filtros: skill (opcional — no default a "mis skills" porque hoy no hay
- * forma de leerlas desde el frontend post-login, ver nota en el mensaje de cierre), radio, rango
- * de fecha y rango de pago — los 4 que pediste, todos ya soportados por el backend.
+ * si ya llegó al cupo". Filtros: skill, radio, rango de fecha y rango de pago — los 4 que
+ * pediste. Segunda vuelta: el filtro de skill defaultea a la primera skill propia del worker
+ * (`GET /api/workers/me`, resuelto) en vez de "Todas" — el worker sigue pudiendo cambiarlo a mano.
  */
 export function BrowseShiftsScreen() {
   const queryClient = useQueryClient();
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [skill, setSkill] = useState<string | null>(null);
+  const [hasUserPickedSkill, setHasUserPickedSkill] = useState(false);
   const [radiusKm, setRadiusKm] = useState<number>(15);
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
@@ -39,6 +42,20 @@ export function BrowseShiftsScreen() {
       setCoords({ latitude: position.coords.latitude, longitude: position.coords.longitude });
     })();
   }, []);
+
+  const myProfileQuery = useQuery({ queryKey: ['my-worker-profile'], queryFn: getMyWorkerProfile });
+  useEffect(() => {
+    // Solo aplica el default mientras el worker no tocó el filtro a mano — si el profile
+    // resuelve tarde y el usuario ya eligió "Todas" u otra skill, no le pisamos la elección.
+    if (myProfileQuery.data && !hasUserPickedSkill) {
+      setSkill(defaultSkillFilter(myProfileQuery.data.skills));
+    }
+  }, [myProfileQuery.data, hasUserPickedSkill]);
+
+  function pickSkill(value: string | null) {
+    setHasUserPickedSkill(true);
+    setSkill(value);
+  }
 
   const shiftsQuery = useQuery({
     queryKey: ['browse-shifts', coords, skill, radiusKm, minAmount, maxAmount, dateFrom, dateTo],
@@ -87,9 +104,9 @@ export function BrowseShiftsScreen() {
 
       <Text className="mb-2 text-sm font-medium text-neutral-700">Habilidad</Text>
       <View className="mb-4 flex-row flex-wrap">
-        <SkillChip label="Todas" selected={skill === null} onPress={() => setSkill(null)} />
+        <SkillChip label="Todas" selected={skill === null} onPress={() => pickSkill(null)} />
         {WORKER_SKILLS.map((s) => (
-          <SkillChip key={s.value} label={s.label} selected={skill === s.value} onPress={() => setSkill(s.value)} />
+          <SkillChip key={s.value} label={s.label} selected={skill === s.value} onPress={() => pickSkill(s.value)} />
         ))}
       </View>
 
