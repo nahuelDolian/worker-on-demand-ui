@@ -1,5 +1,13 @@
 # Spec: Rediseño UX + Mapa/Geocoding + Emojis por Skill
 
+> ## ✅ SPLITEADA (2026-09-10) — este archivo es histórico, no se toma tal cual
+> La sesión de grilling que este documento pedía ya se hizo (issue frontend #15). Se dividió en 3 specs concretas:
+> - [`07-rediseno-visual-y-animaciones.md`](07-rediseno-visual-y-animaciones.md) — rediseño estilo Rappi + animaciones (alcance funcional; valores concretos pantalla por pantalla).
+> - [`08-emojis-configurables-por-skill.md`](08-emojis-configurables-por-skill.md) — emoji por skill, tabla + endpoint ADMIN + pantalla admin acotada.
+> - [`09-geocoding-direcciones-new-shift.md`](09-geocoding-direcciones-new-shift.md) — autocomplete de direcciones + geocoding en `NewShiftScreen`, sin mapa nativo ni Google Places (ver [ADR-0001](../../adr/0001-geocoding-sin-mapa-nativo-ni-google-places.md)).
+>
+> El resto de este archivo queda como registro de cómo se llegó a esa división — no lo uses como spec a implementar.
+
 **Categoría:** 🟦 Extensión · **Gap origen:** pedido directo de Pilu (mensaje sobre UX/diseño), registrado en `HANDOFF.md` 2026-09-09 como "paquete grande, no arrancado"
 **Estado actual:** ❌ No arrancada. Spec deliberadamente dejada sin resolver — Pilu pidió explícitamente "dejemos el spec/ticket bien definido y lo tomamos posteriormente" en la sesión de grilling del 2026-09-09, para no forzar decisiones de producto en el mismo momento en que se estaba resolviendo otro batch de specs.
 

@@ -16,6 +16,11 @@ export const createShiftSchema = z.object({
   endTime: z.string().regex(timeRegex, 'Formato HH:mm'),
   shiftLat: z.coerce.number().min(-90, 'Latitud inválida').max(90, 'Latitud inválida'),
   shiftLng: z.coerce.number().min(-180, 'Longitud inválida').max(180, 'Longitud inválida'),
+  // extensiones/09-geocoding-direcciones-new-shift.md: se completan al elegir una sugerencia del
+  // autocomplete (o via reverse-geocoding con "mi ubicación actual") — opcionales porque el
+  // fallback de cargar lat/lng a mano sigue existiendo y no siempre hay dirección resuelta.
+  shiftAddress: z.string().optional(),
+  shiftPlaceId: z.string().optional(),
 });
 
 export type CreateShiftValues = z.infer<typeof createShiftSchema>;

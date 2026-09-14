@@ -37,9 +37,20 @@ interface ShiftCardProps {
   actionLabel?: string;
   onAction?: () => void;
   actionLoading?: boolean;
+  /** extensiones/08-emojis-configurables-por-skill.md: ya resuelto por el caller
+   * (`resolveSkillEmoji`) — `undefined` si `GET /api/skill-emojis` no cargó, cae a solo texto. */
+  skillEmoji?: string;
 }
 
-export function ShiftCard({ shift, distanceMeters, onPress, actionLabel, onAction, actionLoading }: ShiftCardProps) {
+export function ShiftCard({
+  shift,
+  distanceMeters,
+  onPress,
+  actionLabel,
+  onAction,
+  actionLoading,
+  skillEmoji,
+}: ShiftCardProps) {
   // Evita anidar un elemento interactivo dentro de otro (warning real de React DOM en web,
   // "<button> cannot appear as a descendant of <button>") — si hay un botón de acción dedicado,
   // la card entera deja de ser tocable, en vez de competir por el mismo tap.
@@ -50,12 +61,20 @@ export function ShiftCard({ shift, distanceMeters, onPress, actionLabel, onActio
   return (
     <Container {...containerProps} className="mb-3 rounded-xl border border-neutral-200 bg-white p-4">
       <View className="mb-2 flex-row items-center justify-between">
-        <Text className="text-base font-semibold text-neutral-900">{skillLabel(shift.requiredSkill)}</Text>
+        <Text className="text-base font-semibold text-neutral-900">
+          {skillEmoji ? `${skillEmoji} ` : ''}
+          {skillLabel(shift.requiredSkill)}
+        </Text>
         <View className="rounded-full bg-neutral-100 px-3 py-1">
           <Text className="text-xs font-medium text-neutral-600">{STATUS_LABELS[shift.status] ?? shift.status}</Text>
         </View>
       </View>
       <Text className="mb-1 text-sm text-neutral-500">{formatDateTime(shift.startTime)}</Text>
+      {shift.shiftAddress ? (
+        <Text className="mb-1 text-sm text-neutral-500" numberOfLines={1}>
+          📍 {shift.shiftAddress}
+        </Text>
+      ) : null}
       <View className="flex-row items-center justify-between">
         <Text className="text-base font-medium text-emerald-700">${shift.baseAmount.toLocaleString('es-AR')}</Text>
         {distanceMeters !== undefined ? (

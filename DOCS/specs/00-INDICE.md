@@ -29,7 +29,10 @@
 | 17 | [Analítica y crash reporting](extensiones/03-analitica-crash-reporting.md) | Extensión | Útil tenerlo temprano en la práctica, aunque no bloquea nada |
 | 18 | [Internacionalización](extensiones/04-internacionalizacion.md) | Extensión | Solo si se planea expandir fuera de Argentina |
 | 19 | [Accesibilidad avanzada](extensiones/05-accesibilidad-avanzada.md) | Extensión | La base ya es buena; esto es formalizarla |
-| 20 | [Rediseño UX + mapa/geocoding + emojis](extensiones/06-rediseno-ux-mapa-emojis.md) | Extensión | Placeholder (2026-09-09) — necesita su propia sesión de grilling (proveedor de mapa, alcance de emojis) antes de spliteares en specs concretas |
+| 20 | ~~[Rediseño UX + mapa/geocoding + emojis](extensiones/06-rediseno-ux-mapa-emojis.md)~~ | Extensión | Spliteada (2026-09-10) en las 3 filas de abajo — ver ese archivo solo como registro histórico |
+| 21 | [Rediseño visual (estilo Rappi) y animaciones](extensiones/07-rediseno-visual-y-animaciones.md) | Extensión | Alcance funcional + proceso; `NewShiftScreen` primero, junto con #23 |
+| 22 | [Emojis configurables por skill](extensiones/08-emojis-configurables-por-skill.md) | Extensión | Tabla + endpoint ADMIN, mismo patrón que `platform_commission_config`; incluye pantalla admin acotada |
+| 23 | [Geocoding y autocomplete de direcciones en NewShiftScreen](extensiones/09-geocoding-direcciones-new-shift.md) | Extensión | Reemplaza lat/lng a mano; sin mapa nativo ni Google Places (ver ADR-0001) |
 
 ## Categorías
 🟩 **Esenciales** — sin esto la app no es usable de punta a punta o no es segura de operar.

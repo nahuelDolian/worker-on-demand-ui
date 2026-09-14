@@ -5,9 +5,12 @@ interface SkillChipProps {
   label: string;
   selected: boolean;
   onPress: () => void;
+  /** extensiones/08-emojis-configurables-por-skill.md: decorativo, no entra en accessibilityLabel
+   * (evita que el screen reader lo anuncie por separado del label). */
+  emoji?: string;
 }
 
-export function SkillChip({ label, selected, onPress }: SkillChipProps) {
+export function SkillChip({ label, selected, onPress, emoji }: SkillChipProps) {
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -18,7 +21,9 @@ export function SkillChip({ label, selected, onPress }: SkillChipProps) {
         selected ? 'border-emerald-600 bg-emerald-600' : 'border-neutral-300 bg-white'
       }`}
     >
-      <Text className={selected ? 'font-medium text-white' : 'text-neutral-700'}>{label}</Text>
+      <Text className={selected ? 'font-medium text-white' : 'text-neutral-700'}>
+        {emoji ? `${emoji} ${label}` : label}
+      </Text>
     </Pressable>
   );
 }

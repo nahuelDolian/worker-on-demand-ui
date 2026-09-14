@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShiftCard } from '../../components/ui/ShiftCard';
@@ -7,9 +8,11 @@ import { SkillChip } from '../../components/ui/SkillChip';
 import { WORKER_SKILLS } from '../../constants/skills';
 import { applyToShift, listShifts } from '../../api/shiftsApi';
 import { getMyWorkerProfile } from '../../api/workerOnboardingApi';
+import { getSkillEmojis } from '../../api/skillEmojisApi';
 import { ApiError } from '../../api/httpClient';
 import { distanceInMeters } from '../../lib/geo';
 import { defaultSkillFilter } from '../../lib/workerFilters';
+import { resolveSkillEmoji } from '../../lib/skillEmojis';
 
 const RADIUS_OPTIONS_KM = [5, 15, 30, 50];
 
@@ -44,6 +47,8 @@ export function BrowseShiftsScreen() {
   }, []);
 
   const myProfileQuery = useQuery({ queryKey: ['my-worker-profile'], queryFn: getMyWorkerProfile });
+  // extensiones/08-emojis-configurables-por-skill.md: cambia poco, mismo criterio de cache que platform-commission.
+  const skillEmojisQuery = useQuery({ queryKey: ['skill-emojis'], queryFn: getSkillEmojis });
   useEffect(() => {
     // Solo aplica el default mientras el worker no tocó el filtro a mano — si el profile
     // resuelve tarde y el usuario ya eligió "Todas" u otra skill, no le pisamos la elección.
@@ -102,71 +107,79 @@ export function BrowseShiftsScreen() {
     >
       <Text className="mb-4 text-2xl font-bold text-neutral-900">Turnos cerca</Text>
 
-      <Text className="mb-2 text-sm font-medium text-neutral-700">Habilidad</Text>
-      <View className="mb-4 flex-row flex-wrap">
-        <SkillChip label="Todas" selected={skill === null} onPress={() => pickSkill(null)} />
-        {WORKER_SKILLS.map((s) => (
-          <SkillChip key={s.value} label={s.label} selected={skill === s.value} onPress={() => pickSkill(s.value)} />
-        ))}
-      </View>
+      <Animated.View entering={FadeInDown.duration(350)} className="mb-5 rounded-2xl border border-neutral-100 bg-white p-4">
+        <Text className="mb-2 text-sm font-medium text-neutral-700">Habilidad</Text>
+        <View className="mb-4 flex-row flex-wrap">
+          <SkillChip label="Todas" selected={skill === null} onPress={() => pickSkill(null)} />
+          {WORKER_SKILLS.map((s) => (
+            <SkillChip
+              key={s.value}
+              label={s.label}
+              selected={skill === s.value}
+              onPress={() => pickSkill(s.value)}
+              emoji={resolveSkillEmoji(s.value, skillEmojisQuery.data)}
+            />
+          ))}
+        </View>
 
-      <Text className="mb-2 text-sm font-medium text-neutral-700">Radio</Text>
-      <View className="mb-4 flex-row flex-wrap">
-        {RADIUS_OPTIONS_KM.map((km) => (
-          <SkillChip key={km} label={`${km} km`} selected={radiusKm === km} onPress={() => setRadiusKm(km)} />
-        ))}
-      </View>
-      {!coords ? (
-        <Text className="-mt-3 mb-4 text-sm text-neutral-500">
-          Sin acceso a tu ubicación no podemos filtrar por radio — habilitalo para usar este filtro.
-        </Text>
-      ) : null}
+        <Text className="mb-2 text-sm font-medium text-neutral-700">Radio</Text>
+        <View className="mb-4 flex-row flex-wrap">
+          {RADIUS_OPTIONS_KM.map((km) => (
+            <SkillChip key={km} label={`${km} km`} selected={radiusKm === km} onPress={() => setRadiusKm(km)} />
+          ))}
+        </View>
+        {!coords ? (
+          <Text className="-mt-3 mb-4 text-sm text-neutral-500">
+            Sin acceso a tu ubicación no podemos filtrar por radio — habilitalo para usar este filtro.
+          </Text>
+        ) : null}
 
-      <Text className="mb-2 text-sm font-medium text-neutral-700">Pago (ARS)</Text>
-      <View className="mb-4 flex-row gap-3">
-        <TextInput
-          value={minAmount}
-          onChangeText={setMinAmount}
-          placeholder="Mínimo"
-          keyboardType="decimal-pad"
-          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2"
-        />
-        <TextInput
-          value={maxAmount}
-          onChangeText={setMaxAmount}
-          placeholder="Máximo"
-          keyboardType="decimal-pad"
-          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2"
-        />
-      </View>
+        <Text className="mb-2 text-sm font-medium text-neutral-700">Pago (ARS)</Text>
+        <View className="mb-4 flex-row gap-3">
+          <TextInput
+            value={minAmount}
+            onChangeText={setMinAmount}
+            placeholder="Mínimo"
+            keyboardType="decimal-pad"
+            className="flex-1 rounded-xl border border-neutral-300 px-3 py-2"
+          />
+          <TextInput
+            value={maxAmount}
+            onChangeText={setMaxAmount}
+            placeholder="Máximo"
+            keyboardType="decimal-pad"
+            className="flex-1 rounded-xl border border-neutral-300 px-3 py-2"
+          />
+        </View>
 
-      <Text className="mb-2 text-sm font-medium text-neutral-700">Fecha</Text>
-      <View className="mb-6 flex-row gap-3">
-        <TextInput
-          value={dateFrom}
-          onChangeText={setDateFrom}
-          placeholder="Desde (AAAA-MM-DD)"
-          maxLength={10}
-          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2"
-        />
-        <TextInput
-          value={dateTo}
-          onChangeText={setDateTo}
-          placeholder="Hasta (AAAA-MM-DD)"
-          maxLength={10}
-          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2"
-        />
-      </View>
+        <Text className="mb-2 text-sm font-medium text-neutral-700">Fecha</Text>
+        <View className="flex-row gap-3">
+          <TextInput
+            value={dateFrom}
+            onChangeText={setDateFrom}
+            placeholder="Desde (AAAA-MM-DD)"
+            maxLength={10}
+            className="flex-1 rounded-xl border border-neutral-300 px-3 py-2"
+          />
+          <TextInput
+            value={dateTo}
+            onChangeText={setDateTo}
+            placeholder="Hasta (AAAA-MM-DD)"
+            maxLength={10}
+            className="flex-1 rounded-xl border border-neutral-300 px-3 py-2"
+          />
+        </View>
+      </Animated.View>
 
       {shiftsQuery.isLoading ? (
         <ActivityIndicator />
       ) : (shiftsQuery.data ?? []).length === 0 ? (
-        <View className="rounded-xl border border-dashed border-neutral-300 p-4">
+        <View className="rounded-2xl border border-dashed border-neutral-300 p-4">
           <Text className="text-sm text-neutral-500">No hay turnos que matcheen estos filtros ahora mismo.</Text>
         </View>
       ) : (
-        (shiftsQuery.data ?? []).map((shift) => (
-          <View key={shift.id}>
+        (shiftsQuery.data ?? []).map((shift, index) => (
+          <Animated.View key={shift.id} entering={FadeInDown.duration(300).delay(60 * Math.min(index, 6))}>
             <ShiftCard
               shift={shift}
               distanceMeters={
@@ -175,6 +188,7 @@ export function BrowseShiftsScreen() {
               actionLabel="Postularme"
               onAction={() => applyMutation.mutate(shift.id)}
               actionLoading={applyingShiftId === shift.id}
+              skillEmoji={resolveSkillEmoji(shift.requiredSkill, skillEmojisQuery.data)}
             />
             {feedback?.shiftId === shift.id ? (
               <Text
@@ -184,7 +198,7 @@ export function BrowseShiftsScreen() {
                 {feedback.message}
               </Text>
             ) : null}
-          </View>
+          </Animated.View>
         ))
       )}
 
